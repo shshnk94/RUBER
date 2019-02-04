@@ -13,7 +13,7 @@ def create_embedding_layer(weight_matrix):
 
 class Encoder(nn.Module):
 	
-	def __init__(self, input_size, hidden_size, batch_size = 1, num_layers = 1, num_directions = 2, weight_matrix)
+	def __init__(self, input_size, hidden_size, weight_matrix, batch_size = 1, num_layers = 1, num_directions = 2):
 		
 		super(Encoder, self).__init__()
 		

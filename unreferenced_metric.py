@@ -6,28 +6,66 @@ from encoder import Encoder
 
 def load_data():
     
-    # Read the context and responseword embeddings
-    with open("context.pkl", "rb") as context_file:
-        X = pkl.load(context_file)
-    with open("response.pkl", "rb") as response_file:
-        Y = pkl.load(response_file)
-        
-    return X, Y
+	# Read the context and responseword embeddings
+	with open("tuning/context.pkl", "rb") as context_file:
+		X = pkl.load(context_file)
+	with open("tuning/response.pkl", "rb") as response_file:
+		Y = pkl.load(response_file)
+	
+	# Reads the weight matrix required to create the embedding layer and also word indices.
+	with open("vocab_weight_matrix.pkl", "rb") as weight_file:
+		weight_matrix = pkl.load(weight_file)
+	with open("word_to_index.pkl", "rb") as index_file:
+		word_to_index = pkl.load(index_file)
+	with open("vocabulary.pkl", "rb") as vocab_file:
+		vocabulary = pkl.load(vocab_file)
+ 
+	return X, Y, weight_matrix, word_to_index, vocabulary
+
+def to_index_with_padding(context, response, word_to_index, vocabulary):
+	
+	# Get the length of each sentence and the max among them
+	X_lengths = []
+	Y_lengths = []
+
+	for x, y in zip(context, response):
+		X_lengths.append(len(x))
+		Y_lengths.append(len(y))
+
+	max_X_length = max(X_lengths)
+	max_Y_length = max(Y_lengths)
+	X = []
+	Y = []
+
+	for x, y in zip(context, response):
+	
+		# Convert all words to their integer indices	
+		sentence = [word_to_index[word] for word in x]
+		# Add padding to make the sentence equal to the max_X_length
+		padding = [word_to_index["<PAD>"] for i in range(max_X_length - len(sentence))]
+		sentence += padding
+		X.append(sentence)
+				
+		sentence = [word_to_index[word] for word in y]
+		padding = [word_to_index["<PAD>"] for i in range(max_Y_length - len(sentence))]
+		sentence += padding
+		Y.append(sentence)
+		
+	# Return the datasets as tensors
+	return torch.Tensor(X), torch.Tensor(Y)
 
 """
 Each item in the list X contains one context sentence with each word embedding of size 25.
-Hence an item has the dimension (number_of_words, embedding_dimension = 25).
-Similarly the response Y as well.
+Hence an item has the dimension (number_of_words, embedding_dimension = 25). Similarly the response Y.
 """
-X, Y = load_data()
+X, Y, weight_matrix, word_to_index, vocabulary = load_data()
+X, Y = to_index_with_padding(X, Y, word_to_index, vocabulary)
 
-encoder_rnn = Encoder(input_size=25, hidden_size=10)
+#encoder_rnn = Encoder(input_size=25, hidden_size=10)
 
 # Creates a summary of the input context by producing a context vectors
-for context in X:
-	output, h_N = encoder_rnn.forward(torch.Tensor(context).view(context.shape[0], 1, context.shape[1]))
+#for context in X:
+	#output, h_N = encoder_rnn.forward(torch.Tensor(context).view(context.shape[0], 1, context.shape[1]))
 
 # Use the context vector and generate the response sentence.
-for response in Y:
-	output
 
