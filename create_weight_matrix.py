@@ -76,10 +76,16 @@ def create_embedding_matrix(vocabulary):
 	
 	weight_matrix = []
 	for word in vocabulary:
-		try:
-			weight_matrix.append(word_to_embedding[word])
-		except:
-			weight_matrix.append(np.random.rand(5))
+		
+		# Word embedding for padding is just a vector of zeros
+		if word == "<PAD>":
+			weight_matrix.append(np.zeros(25, dtype = float))
+		
+		else:
+			try:
+				weight_matrix.append(word_to_embedding[word])
+			except:
+				weight_matrix.append(np.random.rand(5))
 	
 	weight_matrix = np.array(weight_matrix)
 
