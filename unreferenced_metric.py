@@ -1,5 +1,6 @@
 import torch, torch.nn as nn
 import pickle as pkl
+import numpy as np
 
 # Custom Encoder and Decoder classes for the respective RNNs
 from encoder import Encoder
@@ -52,20 +53,20 @@ def to_index_with_padding(context, response, word_to_index, vocabulary):
 		Y.append(sentence)
 		
 	# Return the datasets as tensors
-	return torch.Tensor(X), torch.Tensor(Y)
+	return torch.LongTensor(X), torch.LongTensor(Y), np.array(X_lengths), np.array(Y_lengths)
 
 """
 Each item in the list X contains one context sentence with each word embedding of size 25.
 Hence an item has the dimension (number_of_words, embedding_dimension = 25). Similarly the response Y.
 """
 X, Y, weight_matrix, word_to_index, vocabulary = load_data()
-X, Y = to_index_with_padding(X, Y, word_to_index, vocabulary)
+X, Y, X_lengths,Y_lengths = to_index_with_padding(X, Y, word_to_index, vocabulary)
 
-#encoder_rnn = Encoder(input_size=25, hidden_size=10)
+encoder_rnn = Encoder(25, 10, torch.Tensor(weight_matrix))
 
 # Creates a summary of the input context by producing a context vectors
 #for context in X:
-	#output, h_N = encoder_rnn.forward(torch.Tensor(context).view(context.shape[0], 1, context.shape[1]))
+context_vector = encoder_rnn.forward(X, X_lengths)
 
 # Use the context vector and generate the response sentence.
 

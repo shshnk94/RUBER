@@ -3,6 +3,8 @@ import sys
 import pickle as pkl
 import numpy as np
 
+embedding_dim = 25
+
 """
 This function loads the data (context/resposne) from the text files, tokenizes and stores it for further usage.
 Also, it creates multiple indices for easier access of the words.
@@ -69,6 +71,9 @@ def store_data(function, file_type, data):
 
 	return
 
+"""
+Create a embedding matrix (weight matrix) for the vocabulary of words in the dataset.
+"""
 def create_embedding_matrix(vocabulary):
 	
 	with open("word_to_embedding.pkl", "rb") as embed_file:
@@ -79,13 +84,13 @@ def create_embedding_matrix(vocabulary):
 		
 		# Word embedding for padding is just a vector of zeros
 		if word == "<PAD>":
-			weight_matrix.append(np.zeros(25, dtype = float))
+			weight_matrix.append(np.zeros(embedding_dim, dtype = float))
 		
 		else:
 			try:
 				weight_matrix.append(word_to_embedding[word])
 			except:
-				weight_matrix.append(np.random.rand(5))
+				weight_matrix.append(np.random.rand(embedding_dim))
 	
 	weight_matrix = np.array(weight_matrix)
 
