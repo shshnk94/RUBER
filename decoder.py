@@ -1,36 +1,66 @@
 import torch, torch.nn as nn
+import numpy as np
 
-class Dncoder(nn.Module):
+"""
+Same as the create_embedding_layer in the Encoder class.
+"""
+def create_embedding_layer(weight_matrix):
 	
-	def __init__(self, input_size, hidden_size, output_size, batch_size = 1, num_layers = 1, num_directions = 2):
+	num_embeddings, embedding_dim = weight_matrix.size()
+
+	embedding_layer = nn.Embedding(num_embeddings = num_embeddings, 
+								   embedding_dim = embedding_dim,
+								   padding_idx = 0)
+	embedding_layer.load_state_dict({"weight" : weight_matrix})
+	embedding_layer.requires_grad = False
+
+	return embedding_layer
+
+class Decoder(nn.Module):
+	
+	def __init__(self, input_size, hidden_size, output_size, weight_matrix):
 		
-		super(Dncoder, self).__init__()
+		super(Decoder, self).__init__()
 		
 		# Initialize encoder parameters	
 		self.input_size = input_size
-		self.num_directions = num_directions
-		self.hidden_size = hidden_size	
-		self.batch_size = batch_size
+		self.hidden_size = hidden_size
+		self.embedding = create_embedding_layer(weight_matrix)
+		
+		# Keeping this hardcoded for now	
+		self.num_directions = 2
 		
 		# Create a GRU encoder with the specified parameters
 		self.GRU = nn.GRU(input_size = self.input_size,
 						  hidden_size = self.hidden_size,
-						  bidirectional = True if (num_directions == 2) else False)
+						  bidirectional = True if (self.num_directions == 2) else False)
 		
-		# Output Layer
-		self.out = nn.Linear(hidden_size, output_size)
-		self.softmax = nn.Softmax(output_size)
+		# Calculate the signal from the hidden layer to output layer and then pass through softmax.
+		self.signal = nn.Linear(hidden_size, output_size)
+		self.output = nn.Softmax(dim = 2)
 
 		return
 
-	def forward(self, sentence, h0):
+	def forward(self, Y, Y_lengths, context_vector):
 		
-		"""	
-		In case of the decoder RNN, the input sentence is same as the expected output, but after adding the
-		<START> and <END> tokens to assist Teacher Forcing training.
-		"""
-		output, h_N = self.GRU(sentence, h0)
+		batch_size, max_Y_length = Y.size()
+
+		# Convert the dataset of indices to their respective word embeddings (including padding).
+		# (num_sentences, max_Y_length) => (num_sentences, max_Y_length, embedding_dim)
+		Y = self.embedding(Y)
+
+		# Pack padded sequence to avoid computations on the padding
+		Y_lengths, sorted_indices = -np.sort(-Y_lengths), np.argsort(-Y_lengths)
+		Y = Y.index_select(0, torch.LongTensor(sorted_indices))
+		Y = nn.utils.rnn.pack_padded_sequence(Y, Y_lengths, batch_first = True)
 		
-		return output, h_N
+		# Feed forward through the GRU
+		packed_output, h_N = self.GRU(Y, context_vector)
 		
+		# Unpack the output to feed it to further layers
+		output, _ = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first = True)
+		output = output.view(batch_size, max_Y_length, self.num_directions, -1)
 		
+		# Code to handle BiGRU output and then pass it to the Linear and Softmax layers 
+
+		return None, None

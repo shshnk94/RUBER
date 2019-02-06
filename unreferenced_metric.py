@@ -4,6 +4,7 @@ import numpy as np
 
 # Custom Encoder and Decoder classes for the respective RNNs
 from encoder import Encoder
+from decoder import Decoder
 
 def load_data():
     
@@ -23,7 +24,7 @@ def load_data():
  
 	return X, Y, weight_matrix, word_to_index, vocabulary
 
-def to_index_with_padding(context, response, word_to_index, vocabulary):
+def word_to_index_with_padding(context, response, word_to_index, vocabulary):
 	
 	# Get the length of each sentence and the max among them
 	X_lengths = []
@@ -60,13 +61,13 @@ Each item in the list X contains one context sentence with each word embedding o
 Hence an item has the dimension (number_of_words, embedding_dimension = 25). Similarly the response Y.
 """
 X, Y, weight_matrix, word_to_index, vocabulary = load_data()
-X, Y, X_lengths,Y_lengths = to_index_with_padding(X, Y, word_to_index, vocabulary)
+X, Y, X_lengths,Y_lengths = word_to_index_with_padding(X, Y, word_to_index, vocabulary)
 
+# Creates a summary of the input context by producing a context vectors for context in X:
 encoder_rnn = Encoder(25, 10, torch.Tensor(weight_matrix))
-
-# Creates a summary of the input context by producing a context vectors
-#for context in X:
 context_vector = encoder_rnn.forward(X, X_lengths)
 
 # Use the context vector and generate the response sentence.
+decoder_rnn = Decoder(25, 10, len(vocabulary),  torch.Tensor(weight_matrix))
+decoder_rnn.forward(Y, Y_lengths, context_vector)
 
