@@ -69,5 +69,5 @@ context_vector = encoder_rnn.forward(X, X_lengths)
 
 # Use the context vector and generate the response sentence.
 decoder_rnn = Decoder(25, 10, len(vocabulary),  torch.Tensor(weight_matrix))
-decoder_rnn.forward(Y, Y_lengths, context_vector)
+output = decoder_rnn.forward(Y, Y_lengths, context_vector)
 

@@ -36,7 +36,7 @@ class Decoder(nn.Module):
 						  bidirectional = True if (self.num_directions == 2) else False)
 		
 		# Calculate the signal from the hidden layer to output layer and then pass through softmax.
-		self.signal = nn.Linear(hidden_size, output_size)
+		self.signal = nn.Linear(hidden_size * self.num_directions, output_size)
 		self.output = nn.Softmax(dim = 2)
 
 		return
@@ -57,10 +57,15 @@ class Decoder(nn.Module):
 		# Feed forward through the GRU
 		packed_output, h_N = self.GRU(Y, context_vector)
 		
-		# Unpack the output to feed it to further layers
-		output, _ = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first = True)
-		output = output.view(batch_size, max_Y_length, self.num_directions, -1)
+		# Unpack the output to feed it to further layers. Unpacked output is a vector formed by the concatenation of the
+		# outputs from both the forward and backward RNNs.
+		gru_output, _ = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first = True)
 		
-		# Code to handle BiGRU output and then pass it to the Linear and Softmax layers 
+		# In case we need to de-concatenate the output.
+		# output = output.view(batch_size, max_Y_length, self.num_directions, -1)
 
-		return None, None
+				
+		# Code to handle BiGRU output and then pass it to the Linear and Softmax layers 
+		output = self.output(self.signal(gru_output))
+		
+		return output
