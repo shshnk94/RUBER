@@ -41,31 +41,17 @@ class Decoder(nn.Module):
 
 		return
 
-	def forward(self, Y, Y_lengths, context_vector):
+	def forward(self, Y, hidden):
 		
-		batch_size, max_Y_length = Y.size()
-
-		# Convert the dataset of indices to their respective word embeddings (including padding).
-		# (num_sentences, max_Y_length) => (num_sentences, max_Y_length, embedding_dim)
+		# Convert the dataset of indices to their respective word embeddings and change the dimension as in Encoder
+		# Since we process one word at a time the dimension should be (sentence_length = 1, batch_size = 1, embedding_dim)
 		Y = self.embedding(Y)
+		Y = Y.view(1, 1 , Y.size()[0])
 
-		# Pack padded sequence to avoid computations on the padding
-		Y_lengths, sorted_indices = -np.sort(-Y_lengths), np.argsort(-Y_lengths)
-		Y = Y.index_select(0, torch.LongTensor(sorted_indices))
-		Y = nn.utils.rnn.pack_padded_sequence(Y, Y_lengths, batch_first = True)
-		
 		# Feed forward through the GRU
-		packed_output, h_N = self.GRU(Y, context_vector)
+		gru_output, next_hidden = self.GRU(Y, hidden)
 		
-		# Unpack the output to feed it to further layers. Unpacked output is a vector formed by the concatenation of the
-		# outputs from both the forward and backward RNNs.
-		gru_output, _ = nn.utils.rnn.pad_packed_sequence(packed_output, batch_first = True)
-		
-		# In case we need to de-concatenate the output.
-		# output = output.view(batch_size, max_Y_length, self.num_directions, -1)
-
-				
 		# Code to handle BiGRU output and then pass it to the Linear and Softmax layers 
 		output = self.output(self.signal(gru_output))
 		
-		return output
+		return output, next_hidden

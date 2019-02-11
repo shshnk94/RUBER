@@ -1,4 +1,4 @@
-import torch, torch.nn as nn
+import torch, torch.optim as optim, torch.nn as nn
 import pickle as pkl
 import numpy as np
 
@@ -24,18 +24,8 @@ def load_data():
  
 	return X, Y, weight_matrix, word_to_index, vocabulary
 
-def word_to_index_with_padding(context, response, word_to_index, vocabulary):
+def change_word_to_index(context, response, word_to_index, vocabulary):
 	
-	# Get the length of each sentence and the max among them
-	X_lengths = []
-	Y_lengths = []
-
-	for x, y in zip(context, response):
-		X_lengths.append(len(x))
-		Y_lengths.append(len(y))
-
-	max_X_length = max(X_lengths)
-	max_Y_length = max(Y_lengths)
 	X = []
 	Y = []
 
@@ -43,31 +33,71 @@ def word_to_index_with_padding(context, response, word_to_index, vocabulary):
 	
 		# Convert all words to their integer indices	
 		sentence = [word_to_index[word] for word in x]
-		# Add padding to make the sentence equal to the max_X_length
-		padding = [word_to_index["<PAD>"] for i in range(max_X_length - len(sentence))]
-		sentence += padding
-		X.append(sentence)
-				
+		X.append(torch.LongTensor(sentence))
+	
+		# Same as above				
 		sentence = [word_to_index[word] for word in y]
-		padding = [word_to_index["<PAD>"] for i in range(max_Y_length - len(sentence))]
-		sentence += padding
-		Y.append(sentence)
+		# Add the indexes for <SOS> and <EOS> tokens into the response sentence
+		sentence.insert(0, word_to_index["<SOS>"])
+		sentence.append(word_to_index["<EOS>"])	
+		Y.append(torch.LongTensor(sentence))
 		
-	# Return the datasets as tensors
-	return torch.LongTensor(X), torch.LongTensor(Y), np.array(X_lengths), np.array(Y_lengths)
+	# Return the datasets with each sentence as tensor of indices
+	return X, Y
 
-"""
-Each item in the list X contains one context sentence with each word embedding of size 25.
-Hence an item has the dimension (number_of_words, embedding_dimension = 25). Similarly the response Y.
-"""
-X, Y, weight_matrix, word_to_index, vocabulary = load_data()
-X, Y, X_lengths,Y_lengths = word_to_index_with_padding(X, Y, word_to_index, vocabulary)
+def train(context, response, encoder_optimizer, decoder_optimizer, criterion):
+	
+	encoder_optimizer.zero_grad()
+	decoder_optimizer.zero_grad()
+	
+	loss = 0
+	
+	# Creates a summary of the input context by producing a context vectors for context in X:
+	encoder_outputs, summary_vector = encoder_rnn.forward(context)
 
-# Creates a summary of the input context by producing a context vectors for context in X:
-encoder_rnn = Encoder(25, 10, torch.Tensor(weight_matrix))
-context_vector = encoder_rnn.forward(X, X_lengths)
+	# Use the context vector and generate the response sentence.
+	# Without using Teacher Forcing and using the predictions as inputs
+	decoder_hidden = summary_vector
 
-# Use the context vector and generate the response sentence.
-decoder_rnn = Decoder(25, 10, len(vocabulary),  torch.Tensor(weight_matrix))
-output = decoder_rnn.forward(Y, Y_lengths, context_vector)
+	for i, word in enumerate(response):
+		
+		# Break the loop whe EOS		
+		if i == len(response) - 1:
+			break
 
+		decoder_output, decoder_hidden = decoder_rnn.forward(word, decoder_hidden)
+		loss += criterion(decoder_output[0], torch.LongTensor([response[i+1]]))
+
+	loss.backward()
+
+	encoder_optimizer.step()
+	decoder_optimizer.step()
+
+	return loss.item() / (len(response) - 1)
+	
+def train_iters(encoder_rnn, decoder_rnn, num_epochs = 100, learning_rate = 0.01):
+	
+	encoder_optimizer = optim.SGD(encoder_rnn.parameters(), lr = learning_rate)
+	decoder_optimizer = optim.SGD(decoder_rnn.parameters(), lr = learning_rate)
+
+	criterion = nn.CrossEntropyLoss()
+
+	for epoch in range(num_epochs):
+		
+		for context, response in zip(X, Y):
+			train(context, response, encoder_optimizer, decoder_optimizer, criterion) 
+
+if __name__ == "__main__":
+
+	"""
+	Each item in the list X contains one context sentence with each word embedding of size 25.
+	Hence an item has the dimension (number_of_words, embedding_dimension = 25). Similarly the response Y.
+	"""
+	X, Y, weight_matrix, word_to_index, vocabulary = load_data()
+	X, Y = change_word_to_index(X, Y, word_to_index, vocabulary)
+
+	encoder_rnn = Encoder(25, 10, torch.Tensor(weight_matrix))
+	decoder_rnn = Decoder(25, 10, len(vocabulary),  torch.Tensor(weight_matrix))
+	
+	train_iters(encoder_rnn, decoder_rnn, 10)
+	#output = decoder_rnn.forward(Y, Y_lengths, context_vector)

@@ -73,6 +73,11 @@ def store_data(function, file_type, data):
 
 """
 Create a embedding matrix (weight matrix) for the vocabulary of words in the dataset.
+
+Parameters
+__________
+
+vocabulary : Vocabulary of words from the training and testing datasets.
 """
 def create_embedding_matrix(vocabulary):
 	
@@ -82,15 +87,16 @@ def create_embedding_matrix(vocabulary):
 	weight_matrix = []
 	for word in vocabulary:
 		
-		# Word embedding for padding is just a vector of zeros
-		if word == "<PAD>":
-			weight_matrix.append(np.zeros(embedding_dim, dtype = float))
+		# Initialize random vectors to the special tokens.		
+		if (word == "<EOS>") or (word == "<SOS>") or (word == "<UNK>"):
+			weight_matrix.append(np.random.rand(embedding_dim))
 		
 		else:
 			try:
 				weight_matrix.append(word_to_embedding[word])
 			except:
-				weight_matrix.append(np.random.rand(embedding_dim))
+				# When the word is not found in the GloVe dictionary, assign the embedding of the UNK token.
+				weight_matrix.append(weight_matrix[word_to_index["<UNK>"]])
 	
 	weight_matrix = np.array(weight_matrix)
 
@@ -99,23 +105,21 @@ def create_embedding_matrix(vocabulary):
 
 	return
 
-if __name__ == "__main__":
+vocabulary = ["<EOS>", "<SOS>", "<UNK>"]
+word_to_index = {"<EOS>" : 0, "<SOS>" : 1, "<UNK>" : 2}
+file_path = [["tuning", "context"],
+			["tuning", "response"],
+			["validation", "context"],
+			["validation", "response"]]
 	
-	vocabulary = ["<PAD>"]
-	word_to_index = {"<PAD>" : 0}
-	file_path = [["tuning", "context"],
-				 ["tuning", "response"],
-				 ["validation", "context"],
-				 ["validation", "response"]]
-	
-	index = 1
-	for function, file_type in file_path:
-		data, index = load_and_tokenize(function, file_type, vocabulary, word_to_index, index)
-		store_data(function, file_type, data)
+index = len(vocabulary)
+for function, file_type in file_path:
+	data, index = load_and_tokenize(function, file_type, vocabulary, word_to_index, index)
+	store_data(function, file_type, data)
 
-	with open("vocabulary.pkl", "wb") as vocab_file:
-		pkl.dump(vocabulary, vocab_file)
-	with open("word_to_index.pkl", "wb") as index_file:
-		pkl.dump(word_to_index, index_file)
+with open("vocabulary.pkl", "wb") as vocab_file:
+	pkl.dump(vocabulary, vocab_file)
+with open("word_to_index.pkl", "wb") as index_file:
+	pkl.dump(word_to_index, index_file)
 
-	create_embedding_matrix(vocabulary)	
+create_embedding_matrix(vocabulary)

@@ -26,9 +26,11 @@ class Encoder(nn.Module):
 		self.input_size = input_size
 		self.hidden_size = hidden_size
 		self.embedding = create_embedding_layer(weight_matrix)
+		self.batch_first = True
 		
 		# Keeping this hardcoded for now	
 		self.num_directions = 2
+		self.batch_size = 1 # We iterate across the dataset since the sentence lengths are different.
 		
 		# Create a GRU encoder with the specified parameters
 		self.GRU = nn.GRU(input_size = self.input_size,
@@ -36,23 +38,18 @@ class Encoder(nn.Module):
 						  bidirectional = True if (self.num_directions == 2) else False)
 
 		return
+	
+	def forward(self, X):
 
-	def forward(self, X, X_lengths):
-		
 		# Initialize the forward and backward GRU hidden states before processing each batch
-		h0 = torch.zeros((self.num_directions, X.size()[0], self.hidden_size))
+		h0 = torch.zeros((self.num_directions,  self.batch_size, self.hidden_size))
 
-		# Convert the dataset of indices to their respective word embeddings (including padding).
-		# (num_sentences, max_X_length) => (num_sentences, max_X_length, embedding_dim)
+		# Convert the dataset of indices to their respective word embeddings and,
+		# change (sentence_length, embedding_dim) to (sentence_length, batch_size = 1, embedding_dim).
 		X = self.embedding(X)
+		X = X.view(X.size()[0], 1, X.size()[1])
 
-		# Pack padded sequence to avoid computations on the padding
-		#X_lengths.sort(reverse = True) #FIXME: Still not sure why
-		X_lengths, sorted_indices = -np.sort(-X_lengths), np.argsort(-X_lengths)
-		X = X.index_select(0, torch.LongTensor(sorted_indices))
-		X = nn.utils.rnn.pack_padded_sequence(X, X_lengths, batch_first = True)
-		
 		# Feed forward through the GRU
-		packed_output, h_N = self.GRU(X, h0)
+		output, h_N = self.GRU(X, h0)
 
-		return h_N
+		return output, h_N
