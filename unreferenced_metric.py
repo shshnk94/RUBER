@@ -45,6 +45,13 @@ def change_word_to_index(context, response, word_to_index, vocabulary):
 def train(model, X, Y, num_epochs = 100, learning_rate = 0.01):
 	
 	model_optimizer = optim.SGD(model.parameters(), lr = learning_rate)
+
+	# Add the parameter matrix 'M' into the optimizer and thus make it trainable
+	for name, parameter in model.named_parameters():
+		if name == "M":
+			model_optimizer.add_parameter_group({'M' : parameter})
+		break
+
 	criterion = NegSampleLoss()
 
 	for epoch in range(num_epochs):
@@ -64,9 +71,7 @@ def train(model, X, Y, num_epochs = 100, learning_rate = 0.01):
 			loss.backward()		
 			model_optimizer.step()
 
-			break
-		
-		break
+	return
 
 if __name__ == "__main__":
 
