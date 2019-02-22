@@ -46,9 +46,14 @@ def change_word_to_index(word_to_index, response, generated):
 	# Return the datasets with each sentence as tensor of indices
 	return X, Y
 
-def get_summary(sentence):
+def get_summary(sentence, embedding):
+		
+	sentence = embedding(sentence)
+
+	max_vector, _ = torch.max(sentence, dim = 0)
+	min_vector, _ = torch.min(sentence, dim = 0)
 	
-	print(sentence)	
+	return torch.cat((max_vector, min_vector))
 	
 	
 def reference_based_score(response, generated, embedding):
@@ -57,11 +62,13 @@ def reference_based_score(response, generated, embedding):
 	
 		for r, g in zip(response, generated):
 			
-			r = get_summary(r)
-			g = get_summary(g)
+			r = get_summary(r, embedding)
+			g = get_summary(g, embedding)
 			
-			break		
-	
+			scores.append(float(torch.dot(r, g) / (r.norm() * g.norm())))
+
+		return scores
+			
 if __name__ == "__main__":
 	
 	response, generated = generate_dataset()
@@ -70,4 +77,5 @@ if __name__ == "__main__":
 	response, generated = change_word_to_index(word_to_index, response, generated)
 	embedding = create_embedding_layer(torch.Tensor(weight_matrix))
 
-	reference_based_score(response, generated, embedding)
+	scores = reference_based_score(response, generated, embedding)
+	print(scores)
