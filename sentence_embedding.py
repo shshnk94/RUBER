@@ -16,11 +16,11 @@ def create_embedding_layer(weight_matrix):
 	return embedding_layer
 	
 
-class Encoder(nn.Module):
+class SentenceEmbedding(nn.Module):
 	
 	def __init__(self, input_size, hidden_size, weight_matrix):
 		
-		super(Encoder, self).__init__()
+		super(SentenceEmbedding, self).__init__()
 		
 		# Initialize encoder parameters	
 		self.input_size = input_size
@@ -30,7 +30,7 @@ class Encoder(nn.Module):
 		
 		# Keeping this hardcoded for now	
 		self.num_directions = 2
-		self.batch_size = 1 # We iterate across the dataset since the sentence lengths are different.
+		self.batch_size = 1 # We iterate across the dataset during training
 		
 		# Create a GRU encoder with the specified parameters
 		self.GRU = nn.GRU(input_size = self.input_size,
@@ -51,5 +51,9 @@ class Encoder(nn.Module):
 
 		# Feed forward through the GRU
 		output, h_N = self.GRU(X, h0)
+	
+		# Concatenate the final states from backward and forward GRUs
+		h_N = h_N.squeeze()
+		h_N = torch.cat((h_N[0], h_N[1]))
 
-		return output, h_N
+		return h_N
