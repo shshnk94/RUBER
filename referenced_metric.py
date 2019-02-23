@@ -46,27 +46,60 @@ def change_word_to_index(word_to_index, response, generated):
 	# Return the datasets with each sentence as tensor of indices
 	return X, Y
 
-def get_summary(sentence, embedding):
-		
+def get_summary(sentence, embedding, UNK_emb):
+	
 	sentence = embedding(sentence)
 
-	max_vector, _ = torch.max(sentence, dim = 0)
-	min_vector, _ = torch.min(sentence, dim = 0)
+	max_vector, arg_max = torch.max(sentence, dim = 0)
+	min_vector, arg_min = torch.min(sentence, dim = 0)
+
+	# Code to be deleted
+	max_count = 0
+	for word in arg_max:
+		if not (0 in (sentence[word] == UNK_emb)):
+			max_count += 1
+
+	min_count = 0
+	for word in arg_min:
+		if not (0 in (sentence[word] == UNK_emb)):
+			min_count += 1
+	#print(max_count,min_count)
 	
+	#print(torch.cat((max_vector, min_vector)))
 	return torch.cat((max_vector, min_vector))
 	
+"""
+Function to be deleted.
+"""
+def count_unk(sentence, UNK_emb, embedding):
 	
-def reference_based_score(response, generated, embedding):
+	sentence = embedding(sentence)
+	count = 0
+	for word in sentence:
+		if not (0 in (word == UNK_emb)):
+			count += 1
+
+	return count
+	
+def reference_based_score(response, generated, embedding, UNK_emb):
 		
 		scores = []
 	
 		for r, g in zip(response, generated):
-			
-			r = get_summary(r, embedding)
-			g = get_summary(g, embedding)
-			
-			scores.append(float(torch.dot(r, g) / (r.norm() * g.norm())))
+		
+			# Code to be deleted.	
+			r_count = count_unk(r, UNK_emb, embedding)
+			g_count = count_unk(g, UNK_emb, embedding)
+			#print(len(r),",",r_count,",",len(g),",",g_count,",", end = "", sep = "")
+			# Ends here
+			r = get_summary(r, embedding, UNK_emb)
+			g = get_summary(g, embedding, UNK_emb)
 
+			#Code to be deleted
+			#print(float(torch.dot(r, g) / (r.norm() * g.norm())))
+			# Ends here
+			scores.append(float(torch.dot(r, g) / (r.norm() * g.norm())))
+			
 		return scores
 			
 if __name__ == "__main__":
@@ -76,6 +109,10 @@ if __name__ == "__main__":
 
 	response, generated = change_word_to_index(word_to_index, response, generated)
 	embedding = create_embedding_layer(torch.Tensor(weight_matrix))
-
-	scores = reference_based_score(response, generated, embedding)
-	print(scores)
+	
+	print("Truth_total,Truth_UNK,Gen_total,Gen_UNK,Score")
+	scores = reference_based_score(response, generated, embedding, torch.Tensor(weight_matrix[2]))
+	
+	print(scores)	
+	with open("scores.pkl", "wb") as handle:
+		pkl.dump(scores, handle)
