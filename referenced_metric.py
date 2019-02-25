@@ -63,7 +63,7 @@ def get_summary(sentence, embedding, UNK_emb):
 	for word in arg_min:
 		if not (0 in (sentence[word] == UNK_emb)):
 			min_count += 1
-	#print(max_count,min_count)
+	print(max_count,",",min_count, sep = "")
 	
 	#print(torch.cat((max_vector, min_vector)))
 	return torch.cat((max_vector, min_vector))
@@ -110,9 +110,10 @@ if __name__ == "__main__":
 	response, generated = change_word_to_index(word_to_index, response, generated)
 	embedding = create_embedding_layer(torch.Tensor(weight_matrix))
 	
-	print("Truth_total,Truth_UNK,Gen_total,Gen_UNK,Score")
+	#print("Truth_total,Truth_UNK,Gen_total,Gen_UNK,Score")
+	print("Max,Min")
 	scores = reference_based_score(response, generated, embedding, torch.Tensor(weight_matrix[2]))
 	
-	print(scores)	
+	#print(scores)	
 	with open("scores.pkl", "wb") as handle:
 		pkl.dump(scores, handle)
