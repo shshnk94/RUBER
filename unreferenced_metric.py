@@ -6,6 +6,8 @@ import random
 from model import Model
 from neg_sample_loss import NegSampleLoss
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 def load_data():
     
 	# Read the context and responseword embeddings
@@ -37,11 +39,11 @@ def change_word_to_index(context, response, word_to_index, vocabulary):
 
 		# Convert all words to their integer indices	
 		sentence = [word_to_index[word] for word in x]
-		X.append(torch.LongTensor(sentence))
+		X.append(torch.LongTensor(sentence, device = device))
 	
 		# Same as above				
 		sentence = [word_to_index[word] for word in y]
-		Y.append(torch.LongTensor(sentence))
+		Y.append(torch.LongTensor(sentence, device = device))
 		
 	# Return the datasets with each sentence as tensor of indices
 	return X, Y
@@ -53,7 +55,8 @@ def train(model, X, Y, num_epochs = 100, learning_rate = 0.01):
 	criterion = NegSampleLoss()
 
 	for epoch in range(num_epochs):
-		
+			
+		index = 0	
 		for context, response in zip(X, Y):
 			
 			model_optimizer.zero_grad()
@@ -69,6 +72,9 @@ def train(model, X, Y, num_epochs = 100, learning_rate = 0.01):
 
 			loss.backward()		
 			model_optimizer.step()
+
+			index += 1
+			print(index)
 
 	return
 
@@ -89,9 +95,9 @@ if __name__ == "__main__":
 	X_train, Y_train = change_word_to_index(X_train, Y_train, word_to_index, vocabulary)
 	X_test, Y_test = change_word_to_index(X_test, Y_test, word_to_index, vocabulary)
 
-	model = Model(torch.Tensor(weight_matrix))
+	model = Model(torch.Tensor(weight_matrix, device = device))
 	
-	train(model, X_train, Y_train, 100)
+	train(model, X_train, Y_train, 1)
 	scores = test(model, X_test, Y_test)
 
 	with open("output.pkl", "wb") as handle:

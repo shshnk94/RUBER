@@ -1,6 +1,9 @@
 import torch, torch.nn as nn
 import numpy as np
 
+# Use GPU/CPU based on the availability
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 def create_embedding_layer(weight_matrix):
 	
 	# num_embeddings is the total words in the vocabulary of the dataset and embedding_dim is the dimension
@@ -42,7 +45,7 @@ class SentenceEmbedding(nn.Module):
 	def forward(self, X):
 
 		# Initialize the forward and backward GRU hidden states before processing each batch
-		h0 = torch.zeros((self.num_directions,  self.batch_size, self.hidden_size))
+		h0 = torch.zeros((self.num_directions,  self.batch_size, self.hidden_size), device = device)
 
 		# Convert the dataset of indices to their respective word embeddings and,
 		# change (sentence_length, embedding_dim) to (sentence_length, batch_size = 1, embedding_dim).
