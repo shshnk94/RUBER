@@ -56,7 +56,6 @@ def train(model, X, Y, num_epochs = 100, learning_rate = 0.01):
 
 	for epoch in range(num_epochs):
 			
-		index = 0	
 		for context, response in zip(X, Y):
 			
 			model_optimizer.zero_grad()
@@ -72,9 +71,6 @@ def train(model, X, Y, num_epochs = 100, learning_rate = 0.01):
 
 			loss.backward()		
 			model_optimizer.step()
-
-			index += 1
-			print(index)
 
 	return
 
