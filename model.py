@@ -13,10 +13,10 @@ class Model(nn.Module):
 
 		# FIXME : Hardcoded sizes need to be managed generalized
 		self.summary = SentenceEmbedding(50, 10, weight_matrix)
-		self.mlp = Perceptron(41)
+		self.mlp = Perceptron(41).to(device)
 		
 		# Parameter matrix
-		self.M = nn.Parameter(torch.Tensor(20, 20, device = device))
+		self.M = nn.Parameter(torch.Tensor(20, 20).to(device))
 
 		return
 

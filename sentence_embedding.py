@@ -1,5 +1,6 @@
 import torch, torch.nn as nn
 import numpy as np
+import pdb
 
 # Use GPU/CPU based on the availability
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -38,18 +39,18 @@ class SentenceEmbedding(nn.Module):
 		# Create a GRU encoder with the specified parameters
 		self.GRU = nn.GRU(input_size = self.input_size,
 						  hidden_size = self.hidden_size,
-						  bidirectional = True if (self.num_directions == 2) else False)
+						  bidirectional = True if (self.num_directions == 2) else False).to(device)
 
 		return
 	
 	def forward(self, X):
 
 		# Initialize the forward and backward GRU hidden states before processing each batch
-		h0 = torch.zeros((self.num_directions,  self.batch_size, self.hidden_size), device = device)
+		h0 = torch.zeros((self.num_directions,  self.batch_size, self.hidden_size)).to(device)
 
 		# Convert the dataset of indices to their respective word embeddings and,
 		# change (sentence_length, embedding_dim) to (sentence_length, batch_size = 1, embedding_dim).
-		X = self.embedding(X)
+		X = self.embedding(X).to(device)
 		X = X.view(X.size()[0], 1, X.size()[1])
 
 		# Feed forward through the GRU
