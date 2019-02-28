@@ -2,6 +2,7 @@ import torch, torch.optim as optim, torch.nn as nn
 import pickle as pkl
 import numpy as np
 import random
+import time
 
 from model import Model
 from neg_sample_loss import NegSampleLoss
@@ -51,11 +52,12 @@ def change_word_to_index(context, response, word_to_index, vocabulary):
 
 def train(model, X, Y, num_epochs = 100, learning_rate = 0.01):
 	
-	model_optimizer = optim.SGD(model.parameters(), lr = learning_rate)
+	model_optimizer = optim.Adam(model.parameters(), lr = learning_rate)
 
 	criterion = NegSampleLoss()
 
 	for epoch in range(num_epochs):
+		begin_time = time.time()
 		
 		for context, response in zip(X, Y):
 			
@@ -63,7 +65,6 @@ def train(model, X, Y, num_epochs = 100, learning_rate = 0.01):
 	
 			# Forward propagation	
 			positive_score = model.forward(context, response)
-			print(positive_score)
 
 			# Calculate the score for a negative sample
 			negative_response = random.sample(Y, 1)[0]
@@ -73,6 +74,13 @@ def train(model, X, Y, num_epochs = 100, learning_rate = 0.01):
 
 			loss.backward()		
 			model_optimizer.step()
+
+		end_time = time.time()
+		print("Epoch number:", epoch, " executed in ", end_time - begin_time, " seconds")
+
+		# Store the model parameters after each epoch
+		with open("model_params.pkl", "wb") as handle:
+			pkl.dump([parameter for parameter in model.parameters()], handle)
 
 	return
 
