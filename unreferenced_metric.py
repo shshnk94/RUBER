@@ -55,10 +55,15 @@ def train(model, X, Y, num_epochs = 100, learning_rate = 0.01):
 	model_optimizer = optim.Adam(model.parameters(), lr = learning_rate)
 
 	criterion = NegSampleLoss()
+	epoch_statistics = []
 
 	for epoch in range(num_epochs):
 		begin_time = time.time()
 		
+		max_score = float('inf')	
+		min_score = float('-inf')
+		sum_score = sum_loss = 0.0
+
 		for context, response in zip(X, Y):
 			
 			model_optimizer.zero_grad()
@@ -74,14 +79,26 @@ def train(model, X, Y, num_epochs = 100, learning_rate = 0.01):
 
 			loss.backward()		
 			model_optimizer.step()
+			
+			# Statistical book keeping
+			max_score = positive_score if positive_score > max_score else max_score
+			min_score = positive_score if positive_score < min_score else min_score
+			sum_score += positive_score
+			sum_loss += loss
 
 		end_time = time.time()
 		print("Epoch number:", epoch, " executed in ", end_time - begin_time, " seconds")
+		
+		# Epoch statistics	
+		epoch_statistics.append([max_score, min_score, sum_score / X.shape[0], sum_loss / X.shape[0]])
 
 		# Store the model parameters after each epoch
 		with open("model_params.pkl", "wb") as handle:
 			pkl.dump([parameter for parameter in model.parameters()], handle)
-
+	
+	with open("epoch_statistics.pkl", "wb") as handle:
+			pkl.dump(epoch_statistics,handle)
+	
 	return
 
 def test(model, X, Y):
@@ -103,7 +120,7 @@ if __name__ == "__main__":
 
 	model = Model(torch.Tensor(weight_matrix).to(device))
 	
-	train(model, X_train, Y_train, 100)
+	train(model, X_train, Y_train, 15)
 	scores = test(model, X_test, Y_test)
 
 	with open("output.pkl", "wb") as handle:

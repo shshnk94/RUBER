@@ -4,7 +4,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class NegSampleLoss(nn.Module):
 
-	def __init__(self, delta = 0.5):
+	def __init__(self, delta = 0.1):
 		
 		super(NegSampleLoss, self).__init__()
 
