@@ -5,6 +5,23 @@ from perceptron import Perceptron
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+def init_weights(m):
+	
+	for n, p in m.named_parameters():
+
+		# Don't do anything special for summary and M
+		if n == "M" or n == "summary.embedding.weight":
+			continue
+		
+		# Initialize bias values with small constant	
+		if "bias" in n:
+			p.data.fill_(0.1)
+		
+		#FIXME: No sure if this is used for tanh as well.
+		# Initialize rest of the weights with Xavier initialization
+		else:
+			torch.nn.init.xavier_uniform_(p.data)
+
 class Model(nn.Module):
 	
 	def __init__(self, weight_matrix):
@@ -17,6 +34,8 @@ class Model(nn.Module):
 		
 		# Parameter matrix
 		self.M = nn.Parameter(torch.Tensor(20, 20).to(device))
+		
+		init_weights(self)
 
 		return
 
