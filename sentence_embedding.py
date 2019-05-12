@@ -38,7 +38,6 @@ class SentenceEmbedding(nn.Module):
 		# Create a GRU encoder with the specified parameters
 		self.GRU = nn.GRU(input_size = self.input_size,
 						  hidden_size = self.hidden_size,
-						  dropout = 0.5,
 						  bidirectional = True if (self.num_directions == 2) else False).to(device)
 	
 		return
