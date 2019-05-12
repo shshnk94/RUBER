@@ -15,10 +15,15 @@ class Perceptron(nn.Module):
 		self.fc1 = nn.Linear(input_size, self.hidden_size)
 		self.fc2 = nn.Linear(self.hidden_size, self.output_size)
 
+		self.dropout = nn.Dropout(0.5)
+
 		return
 		
 		
 	def forward(self, x):
+		
+		x = self.dropout(torch.tanh(self.fc1(x))
+		x = torch.sigmoid(self.fc2(x))
 
-		return torch.sigmoid(self.fc2(torch.tanh(self.fc1(x))))
+		return
 

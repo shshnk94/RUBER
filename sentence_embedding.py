@@ -19,7 +19,6 @@ def create_embedding_layer(weight_matrix):
 
 	return embedding_layer
 	
-
 class SentenceEmbedding(nn.Module):
 	
 	def __init__(self, input_size, hidden_size, weight_matrix):
@@ -39,12 +38,13 @@ class SentenceEmbedding(nn.Module):
 		# Create a GRU encoder with the specified parameters
 		self.GRU = nn.GRU(input_size = self.input_size,
 						  hidden_size = self.hidden_size,
+						  dropout = 0.5,
 						  bidirectional = True if (self.num_directions == 2) else False).to(device)
-
+	
 		return
 	
 	def forward(self, X):
-
+		
 		# Initialize the forward and backward GRU hidden states before processing each batch
 		h0 = torch.zeros((self.num_directions,  self.batch_size, self.hidden_size)).to(device)
 
