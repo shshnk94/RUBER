@@ -21,9 +21,9 @@ class Perceptron(nn.Module):
 		
 		
 	def forward(self, x):
-		
-		x = self.dropout(torch.tanh(self.fc1(x))
+
+		x = self.dropout(torch.tanh(self.fc1(x)))
 		x = torch.sigmoid(self.fc2(x))
 
-		return
+		return x
 

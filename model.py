@@ -10,7 +10,7 @@ def init_weights(m):
 	for n, p in m.named_parameters():
 
 		# Don't do anything special for summary and M
-		if n == "M" or n == "summary.embedding.weight":
+		if n == "summary.embedding.weight":
 			continue
 		
 		# Initialize bias values with small constant	
