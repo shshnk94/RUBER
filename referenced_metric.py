@@ -33,7 +33,7 @@ def get_summary(sentence, embedding_dict):
 	
 	max_vector, arg_max = torch.max(sentence, dim = 0)
 	min_vector, arg_min = torch.min(sentence, dim = 0)
-
+	
 	return torch.cat((max_vector, min_vector))
 	
 def reference_based_score(response, generated, embedding_dict):
@@ -42,9 +42,11 @@ def reference_based_score(response, generated, embedding_dict):
 	
 		for r, g in zip(response, generated):
 		
+			print(len(r),",",len(g),",",end = "", sep = "")
 			r = get_summary(r, embedding_dict)
 			g = get_summary(g, embedding_dict)
 
+			print(float(torch.dot(r, g) / (r.norm() * g.norm())))
 			scores.append(float(torch.dot(r, g) / (r.norm() * g.norm())))
 			
 		return scores
@@ -55,6 +57,7 @@ if __name__ == "__main__":
 
 	embedding_dict = load_supplement()
 	
+	print("Truth_total,Gen_total,Score")
 	scores = reference_based_score(response, generated, embedding_dict)
 
 	with open("scores.pkl", "wb") as handle:

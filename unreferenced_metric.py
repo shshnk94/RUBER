@@ -132,28 +132,39 @@ def train(model, X, Y, num_epochs = 100, learning_rate = 0.1):
 			
 			iter_count += 1
 			
-			break
+			#print("Loss ", loss)	
+			#for n, p in model.named_parameters():
+				#if "bias" not in n and "embedding" not in n:
+					#print(n, p.data.mean())
+			
+			#break
 
 		end_time = time.time()
 		
-		for n, p in model.summary.GRU.named_parameters():
-			print(n, p, p.grad)
-		#print("Epoch count ", epoch, "Loss is ", sum_loss / len(X))
+		#for n, p in model.summary.GRU.named_parameters():
+			#print(n, p, p.grad)
+		print("Epoch count ", epoch, "Loss is ", sum_loss / len(X))
 		#print("end")
 		#for n, p in model.named_parameters():
+			#if n == "summary.embedding.weight":
+				#print(p)
 			#print(n, p, p.grad)
-			#print(n, torch.abs(p.data).sum(), torch.abs(p.grad).sum())
+			#if n == "summary.GRU.weight_ih_l0":
+				#print(p.data[0])
+			#if "bias" not in n and "embedding" not in n:
+				#print(n, p.data.mean())
+			#print(n, torch.abs(p.data).std(), torch.abs(p.grad).std())
 		
 		
 		# Epoch statistics	
-		print("Epoch ", epoch, " loss ", sum_loss/len(X))
+		#print("Epoch ", epoch, " loss ", sum_loss/len(X))
 		epoch_statistics.append([float(max_score), float(min_score), float(sum_score / len(X)), float(sum_loss / len(X))])
 
 		# Store the model parameters after each epoch
 		with open("model_params.pkl", "wb") as handle:
 			pkl.dump([parameter for parameter in model.parameters()], handle)
 		
-		break
+		#break
 
 	with open("epoch_statistics.pkl", "wb") as handle:
 			pkl.dump(epoch_statistics,handle)
@@ -185,7 +196,7 @@ if __name__ == "__main__":
 
 	model = Model(torch.Tensor(weight_matrix).to(device))
 	
-	train(model, X_train, Y_train, 100, 0.0001)
+	train(model, X_train, Y_train, 300, 0.001)
 	scores = test(model, X_test, Y_test)
 
 	with open("output.pkl", "wb") as handle:

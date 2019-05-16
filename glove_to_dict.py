@@ -4,7 +4,9 @@ import sys
 
 if __name__ == "__main__":
 	
+	# Provides option to read different filenames corresponding to different dimensional glove embeddings.
 	filename = sys.argv[1]
+
 	word_to_embedding = {}
 
 	with open(filename, "r") as glove_file:

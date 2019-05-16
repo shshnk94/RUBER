@@ -33,8 +33,9 @@ def load_and_tokenize(filename, vocabulary, word_to_index, index):
 		data = pkl.load(handle)
 		
 	for line in data:
-
-		tokenized_line = tokenizer.tokenize(line)
+		
+		#tokenized_line = tokenizer.tokenize(line)
+		tokenized_line = line
 		sentence = []
 
 		for string in tokenized_line:
@@ -82,7 +83,7 @@ def create_embedding_matrix(vocabulary):
 		word_to_embedding = pkl.load(handle)
 	
 	weight_matrix = []
-	for word in vocabulary:
+	for index, word in enumerate(vocabulary):
 		
 		# Initialize random vectors to the special tokens.		
 		if (word == "<EOS>") or (word == "<SOS>") or (word == "<UNK>"):
@@ -97,7 +98,6 @@ def create_embedding_matrix(vocabulary):
 				weight_matrix.append(weight_matrix[word_to_index["<UNK>"]])
 	
 	weight_matrix = np.array(weight_matrix)
-
 	with open("weight_matrix.pkl", "wb") as handle:
 		pkl.dump(weight_matrix, handle)
 
