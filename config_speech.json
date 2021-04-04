@@ -1,0 +1,8 @@
+{"data_type": "speech",
+ "mode": "test",
+ "path": "data/",
+ "embedding_path": "data/",
+ "embedding_dim": 768,
+ "batch_size": 2,
+ "sr": 16000,
+ "model": "facebook/wav2vec2-base-960h"}

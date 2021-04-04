@@ -1,0 +1,7 @@
+{"data_type": "text",
+ "mode": "test",
+ "path": "data/",
+ "embedding_path": "data/",
+ "embedding_dim": 768,
+ "batch_size": 32,
+ "model": "bert-base-uncased"}
