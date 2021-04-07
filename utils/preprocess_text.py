@@ -85,13 +85,21 @@ def remove_stopwords(df, tokenizer, stopwords):
 
 def prepare_dialogues(df):
 
-    dialogues = []
+    positive = []
     for q, r, g in zip(df.index, df.index[1:], df.index[2:]):
-        dialogues.append({'query': df.loc[q, 'sent_id'],
-                          'reference': df.loc[r, 'sent_id'],
-                          'generated': df.loc[g, 'sent_id']})
+        positive.append({'query': df.loc[q, 'sent_id'],
+                         'reference': df.loc[r, 'sent_id'],
+                         'generated': df.loc[g, 'sent_id']})
 
-    dialogues = pd.DataFrame(dialogues)
+    positive = pd.DataFrame(positive)
+    positive['label'] = 1
+
+    negative = positive.copy()
+    negative['reference'] = positive['reference'].sample(frac=1)
+    negative['label'] = 0
+
+    dialogues = pd.concat((positive, negative))
+
     return dialogues
 
 if __name__ == '__main__':

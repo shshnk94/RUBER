@@ -1,110 +1,142 @@
+import json
+import argparse
+
+from sklearn.metrics import f1_score, matthews_corrcoef, classification_report
 import torch
-import torch.optim as optim
 import torch.nn as nn
+from torch.utils.data import DataLoader
 
-torch.manual_seed(0)
+from data.dialogue.dataset import UnimodalDataset, MultimodalDataset
+from data.dialogue.collate import to_tensor
+from models.ruber import Ruber
 
-import pickle as pkl
-import numpy as np
+device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-import random
-random.seed(1)
+def get_loader(config):
+    
+    if config['mode'] == 'train':
+        
+        if config['model_type'] == 'hybrid':
+        
+            train_loader = DataLoader(MultimodalDataset(config), 
+                                      batch_size=config['batch_size'], 
+                                      shuffle=True, 
+                                      collate_fn=to_tensor)
+        
+            valid_loader = DataLoader(MultimodalDataset(config), 
+                                      batch_size=config['batch_size'], 
+                                      shuffle=False, 
+                                      collate_fn=to_tensor)
+        
+        else:
+        
+            train_loader = DataLoader(UnimodalDataset(config), 
+                                      batch_size=config['batch_size'], 
+                                      shuffle=True, 
+                                      collate_fn=to_tensor)
+        
+            valid_loader = DataLoader(UnimodalDataset(config), 
+                                      batch_size=config['batch_size'], 
+                                      shuffle=False, 
+                                      collate_fn=to_tensor)
+        
+        return train_loader, valid_loader
 
-import time
-import csv
+    else:
 
-from model import Model
-from neg_sample_loss import NegSampleLoss
+        test_loader = DataLoader(UnimodalDataset(config), 
+                                  batch_size=config['batch_size'], 
+                                  shuffle=False, 
+                                 collate_fn=to_tensor)
 
-import pdb
+        return test_loader
 
-#def train(model, X, Y, num_epochs = 100, learning_rate = 0.1):
-def train(config):
+def train(config, checkpoint_dir='./'):
+    
+    model = Ruber(config).to(device)
+    train_loader, valid_loader = get_loader(config)
+    
+    criterion = nn.BCEWithLogitsLoss(reduction='mean')
+    optimizer = torch.optim.AdamW(model.unreferenced.parameters(), 
+                                  lr=config['lr'], 
+                                  weight_decay=config['weight_decay'])
+    
+    for epoch in range(config['epochs']):
 
-	op_file = open("stats.csv", "w")	
-	model_optimizer = optim.Adam(model.parameters(), lr = learning_rate)
+        model.train()
 
-	criterion = NegSampleLoss()
-	epoch_statistics = []
+        total_loss = 0
+        for query, reference, generated, labels in train_loader:
 
-	for epoch in range(num_epochs):
-		begin_time = time.time()
-		
-		max_score = float('-inf')	
-		min_score = float('inf')
-		sum_score = sum_loss = 0.0
-		
-		iter_count = 0
-		
-		for context, response in zip(X, Y):
-			
-			model_optimizer.zero_grad()
+            model.zero_grad()        
+            query, reference, generated, labels = (query.to(device), 
+                                                   reference.to(device), 
+                                                   generated.to(device),
+                                                   labels.to(device))
 
-			# Forward propagation	
-			positive_score = model.forward(context, response)
-		
-			# Calculate the score for a negative sample
-			negative_response = random.sample(Y, 1)[0]
-			negative_score = model.forward(context, negative_response)	
-			
-			loss = criterion(positive_score, negative_score) 
-			
-			loss.backward()		
+            logits, score = model(query, reference, generated)
+            loss = criterion(logits, labels)
+            total_loss += loss.item()
+            loss.backward()
+            
+            optimizer.step()
 
-			model_optimizer.step()
-		
-			max_score = positive_score if positive_score > max_score else max_score
-			min_score = positive_score if positive_score < min_score else min_score
-			sum_score += positive_score
-			sum_loss += loss
+        avg_train_loss = total_loss / len(train_loader)            
+        avg_valid_loss, score = test(model, valid_loader)
+        
+        with tune.checkpoint_dir(epoch) as checkpoint_dir:
+            torch.save((model.state_dict(), optimizer.state_dict()), os.path.join(checkpoint_dir, "checkpoint"))
 
-			if (iter_count % 300 == 0) or (iter_count == len(X) - 1):
-				line = "Iter "+ str(iter_count)+ " in epoch "+ str(epoch)+ ","+ str(float(sum_score) / (iter_count + 1))+ ","+ str(float(sum_loss) / (iter_count + 1)) + "\n"
-				op_file.write(line)
-			
-			iter_count += 1
-			
-		end_time = time.time()
-		
-		print("Epoch count ", epoch, "Loss is ", sum_loss / len(X))
-		epoch_statistics.append([float(max_score), float(min_score), float(sum_score / len(X)), float(sum_loss / len(X))])
+        tune.report(f1score=score)
 
-		# Store the model parameters after each epoch
-		with open("model_params.pkl", "wb") as handle:
-			pkl.dump([parameter for parameter in model.parameters()], handle)
-		
-	with open("epoch_statistics.pkl", "wb") as handle:
-			pkl.dump(epoch_statistics,handle)
-	
-	op_file.close()	
-	return
+    return 
+        
+def test(model, loader):
+    
+    model.eval()
 
-def test(model, X, Y):
-	
-	scores = []
+    eval_score = 0
+    nb_eval_steps = 0
+    results, targets = [], []
 
-	for context, response in zip(X, Y):
-		scores.append(model.forward(context, response))
-	
-	return np.array(scores)	
+    for query, reference, generated, labels in loader:
+        
+        query, reference, generated, labels = (query.to(device), 
+                                               reference.to(device), 
+                                               generated.to(device),
+                                               labels.to(device))
+        
+        with torch.no_grad():        
+            logits, score = model(query, reference, generated)
 
-if __name__ == "__main__":
+        logits = logits.detach().cpu().numpy()
+        labels = labels.to('cpu').numpy()
+        
+        results.append(logits)
+        targets.append(labels)
+        
+        tmp_eval_score = f1_score(labels, logits.argmax(axis=1), average='weighted')
+        eval_score += tmp_eval_score
+        eval_loss += loss
 
-	#Each item in the list X contains one context sentence with each word embedding of size 25.
-	#Hence an item has the dimension (number_of_words, embedding_dimension = 25). Similarly the response Y.
-	X_train, Y_train, X_test, Y_test, weight_matrix, word_to_index, vocabulary = load_data()
+        nb_eval_steps += 1
 
-	# Just for debugging purpose make the dataset smaller
-	X_train = X_train[0:100]
-	Y_train = Y_train[0:100]
+    print('MCC: ', matthews_corrcoef(np.concatenate([x.tolist() for x in targets]), 
+                                     np.concatenate(results).argmax(axis=1)))
+    
+    print(classification_report(np.concatenate([x.tolist() for x in targets]), 
+                                np.concatenate(results).argmax(axis=1)))
+    
+    avg_score = eval_score/nb_eval_steps
+    return avg_score
 
-	X_train, Y_train = change_word_to_index(X_train, Y_train, word_to_index, vocabulary)
-	X_test, Y_test = change_word_to_index(X_test, Y_test, word_to_index, vocabulary)
+if __name__ == '__main__':
 
-	model = Model(torch.Tensor(weight_matrix).to(device))
-	
-	train(model, X_train, Y_train, 300, 0.001)
-	scores = test(model, X_test, Y_test)
+    parser = argparse.ArgumentParser(description='Trains the RUBER model.')
+    parser.add_argument('--config', type=str, help='path to the config json')
+    args = parser.parse_args()
 
-	with open("output.pkl", "wb") as handle:
-		pkl.dump(scores, handle)
+    with open(args.config, 'r') as f:
+        config = json.load(f)
+
+    train(config)
