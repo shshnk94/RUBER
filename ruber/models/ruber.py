@@ -10,12 +10,13 @@ class ClassifierHead(nn.Module):
         
         self.hidden1 = nn.Linear(2 * config['embedding_dim'] + 1, config['hidden1_dim'])
         self.hidden2 = nn.Linear(config['hidden1_dim'], config['hidden2_dim'])
-        self.output = nn.Linear(config['hidden2_dim'], 1)
+        self.output = nn.Linear(config['hidden2_dim'], config['num_labels'])
+        self.dropout = nn.Dropout(config['drop_prob'])
         
     def forward(self, x):
         
-        x = F.relu(self.hidden1(x))
-        x = F.relu(self.hidden2(x))
+        x = F.relu(self.dropout(self.hidden1(x)))
+        x = F.relu(self.dropout(self.hidden2(x)))
         x = self.output(x)
         
         return x
@@ -33,7 +34,7 @@ class Unreferenced(nn.Module):
         
         quad = torch.bmm(self.matrix(query).unsqueeze(1), generated.unsqueeze(2)).squeeze(2)
         logits = self.classifier(torch.cat((query, quad, generated), dim=1))
-        
+
         return logits
     
 class Ruber(nn.Module):

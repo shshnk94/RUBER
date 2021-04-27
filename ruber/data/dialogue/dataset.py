@@ -9,31 +9,31 @@ from torch.utils.data import Dataset
 
 class UnimodalDataset(Dataset):
     
-    def __init__(self, config):
+    def __init__(self, path, mode, model_type):
         
-        path = os.path.join(config['path'], config['mode'])
+        path = os.path.join(path, mode)
         
         self.dialogues = pd.read_csv(os.path.join(path, 'dialogues.csv'))
         self.index = json.load(open(os.path.join(path, 'sentence_to_index.json'), 'r'))
-        self.embeddings = h5py.File(os.path.join(path, '{}_embeddings.h5'.format(config['model_type'])), 'r')
+        self.embeddings = h5py.File(os.path.join(path, '{}_embeddings.h5'.format(model_type)), 'r')
         
     def __len__(self):
         return self.dialogues.shape[0]
     
-    def __getitem(self, index):
+    def __getitem__(self, index):
         
         query, reference, generated = self.dialogues.loc[index, ['query', 'reference', 'generated']]
-        query, reference, generated = (self.embeddings.get('dataset')[self.index[query]], 
-                                       self.embeddings.get('dataset')[self.index[reference]], 
-                                       self.embeddings.get('dataset')[self.index[generated]])
+        query, reference, generated = (torch.from_numpy(self.embeddings.get('dataset')[self.index[query]]), 
+                                       torch.from_numpy(self.embeddings.get('dataset')[self.index[reference]]), 
+                                       torch.from_numpy(self.embeddings.get('dataset')[self.index[generated]]))
         
         return query, reference, generated, self.dialogues.loc[index, 'label']
     
 class MultimodalDataset(Dataset):
     
-    def __init__(self, config):
+    def __init__(self, path, mode):
         
-        path = os.path.join(config['path'], config['mode'])
+        path = os.path.join(path, mode)
         
         self.dialogues = pd.read_csv(os.path.join(path, 'dialogues.csv'))
         self.index = json.load(open(os.path.join(path, 'sentence_to_index.json'), 'r'))
